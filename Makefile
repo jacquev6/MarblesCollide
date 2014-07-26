@@ -10,7 +10,7 @@ tests.ok: test_collide
 	./test_collide && touch tests.ok
 
 collide: collide.o main.cpp tests.ok
-	g++ $(FLAGS) main.cpp collide.o -o collide
+	g++ $(FLAGS) $(shell pkg-config cairomm-1.0 --cflags) main.cpp collide.o $(shell pkg-config cairomm-1.0 --libs) -o collide
 
 clean:
 	rm -f collide.o test_collide collide tests.ok
