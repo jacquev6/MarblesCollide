@@ -34,8 +34,8 @@ private:
         ctx->set_source_rgb(.9, .9, .9);
         ctx->paint();
         ctx->set_source_rgb(0, 0, 0);
-        for(const Marble& m: _s->marbles()) {
-            ctx->arc(m.x() / meter, m.y() / meter, m.r() / meter, 0, 2 * M_PI);
+        for(const Marble::Ptr m: _s->marbles()) {
+            ctx->arc(m->x() / meter, m->y() / meter, m->r() / meter, 0, 2 * M_PI);
         }
         ctx->fill();
         img->write_to_png((boost::format("frames/%08d.png") % _i).str());
@@ -48,7 +48,7 @@ private:
 };
 
 int main() {
-    Marble m(50 * meter, 0, 50 * meter, 50 * meter, 400 * meter_per_second, 150 * meter_per_second);
-    Simulation s(640 * meter, 480 * meter, ba::list_of(m), boost::make_shared<FramesDrawer>());
-    s.advanceTo(20 * second);
+    auto m = Marble::create(50 * meter, 0, 50 * meter, 50 * meter, 400 * meter_per_second, 150 * meter_per_second);
+    auto s = Simulation::create(640 * meter, 480 * meter, ba::list_of(m), boost::make_shared<FramesDrawer>());
+    s->advanceTo(20 * second);
 }

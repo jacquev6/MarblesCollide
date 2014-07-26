@@ -7,6 +7,7 @@
 #include <boost/units/systems/si.hpp>
 #include <boost/units/io.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
 
 
 namespace bu {
@@ -21,9 +22,10 @@ typedef bu::quantity<bu::velocity> Velocity;
 typedef bu::quantity<bu::mass> Mass;
 typedef bu::quantity<bu::time> Time;
 
-class Marble {
+class Marble : private boost::noncopyable {
 public:
-    Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
+    typedef boost::shared_ptr<Marble> Ptr;
+    static Ptr create(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
 
     Length r() const;
     Mass m() const;
@@ -34,6 +36,9 @@ public:
 
     void advanceTo(Time);
     void setSpeed(Velocity vx, Velocity vy);
+
+private:
+    Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
 
 private:
     Length _r;
@@ -49,25 +54,29 @@ private:
 class Simulation;
 
 struct EventsHandler {
+    typedef boost::shared_ptr<EventsHandler> Ptr;
     virtual void begin(Simulation*) = 0;
     virtual void tick() = 0;
 };
 
 class Simulation {
-    static boost::shared_ptr<EventsHandler> nullEventsHandler;
+    static EventsHandler::Ptr nullEventsHandler;
 
 public:
-    Simulation(Length width, Length height, const std::vector<Marble>&, boost::shared_ptr<EventsHandler> =nullEventsHandler);
+    typedef boost::shared_ptr<Simulation> Ptr;
+    static Ptr create(Length width, Length height, const std::vector<Marble::Ptr>&, EventsHandler::Ptr=nullEventsHandler);
 
     Length width() const;
     Length height() const;
-    const std::vector<Marble>& marbles() const;
+    const std::vector<Marble::Ptr>& marbles() const;
 
     void scheduleTickIn(Time);
-    void scheduleNextEventsFor(Marble&);
+    void scheduleNextEventsFor(Marble::Ptr);
     void advanceTo(Time);
 
 private:
+    Simulation(Length, Length, const std::vector<Marble::Ptr>&, EventsHandler::Ptr);
+
     class Event;
     class VerticalWallCollision;
     class HorizontalWallCollision;
@@ -80,7 +89,7 @@ private:
     Time _t;
     Length _w;
     Length _h;
-    std::vector<Marble> _marbles;
+    std::vector<Marble::Ptr> _marbles;
     std::multimap<Time, boost::shared_ptr<Event>> _events;
     boost::shared_ptr<EventsHandler> _eventsHandler;
 };

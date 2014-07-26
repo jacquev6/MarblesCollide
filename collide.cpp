@@ -18,6 +18,10 @@ Marble::Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
 {
 }
 
+Marble::Ptr Marble::create(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) {
+    return Ptr(new Marble(r, m, x, y, vx, vy));
+}
+
 Length Marble::r() const {
     return _r;
 }
@@ -62,31 +66,31 @@ struct Simulation::Event {
 };
 
 struct Simulation::VerticalWallCollision : public Simulation::Event {
-    VerticalWallCollision(Marble& m) :
+    VerticalWallCollision(Marble::Ptr m) :
         _m(m)
     {}
 
     void apply(Simulation& s) {
-        _m.setSpeed(-_m.vx(), _m.vy());
+        _m->setSpeed(-_m->vx(), _m->vy());
         s.scheduleNextEventsFor(_m);
     }
 
 private:
-    Marble& _m;
+    Marble::Ptr _m;
 };
 
 struct Simulation::HorizontalWallCollision : public Simulation::Event {
-    HorizontalWallCollision(Marble& m) :
+    HorizontalWallCollision(Marble::Ptr m) :
         _m(m)
     {}
 
     void apply(Simulation& s) {
-        _m.setSpeed(_m.vx(), -_m.vy());
+        _m->setSpeed(_m->vx(), -_m->vy());
         s.scheduleNextEventsFor(_m);
     }
 
 private:
-    Marble& _m;
+    Marble::Ptr _m;
 };
 
 struct Simulation::Tick : public Simulation::Event {
@@ -103,17 +107,21 @@ class NullEventsHandler : public EventsHandler {
 
 boost::shared_ptr<EventsHandler> Simulation::nullEventsHandler = boost::make_shared<NullEventsHandler>();
 
-Simulation::Simulation(Length w, Length h, const std::vector<Marble>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) :
+Simulation::Simulation(Length w, Length h, const std::vector<Marble::Ptr>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) :
     _t(0),
-    _eventsHandler(eventsHandler),
     _w(w),
     _h(h),
-    _marbles(marbles)
+    _marbles(marbles),
+    _eventsHandler(eventsHandler)
 {
-    for(Marble& m: _marbles) {
+    for(Marble::Ptr m: _marbles) {
         scheduleNextEventsFor(m);
     }
     _eventsHandler->begin(this);
+}
+
+Simulation::Ptr Simulation::create(Length w, Length h, const std::vector<Marble::Ptr>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) {
+    return Ptr(new Simulation(w, h, marbles, eventsHandler));
 }
 
 Length Simulation::width() const {
@@ -124,7 +132,7 @@ Length Simulation::height() const {
     return _h;
 }
 
-const std::vector<Marble>& Simulation::marbles() const {
+const std::vector<Marble::Ptr>& Simulation::marbles() const {
     return _marbles;
 }
 
@@ -143,27 +151,27 @@ void Simulation::advanceTo(Time t) {
 }
 
 void Simulation::advanceMarblesTo(Time t) {
-    for(Marble& m: _marbles) {
-        m.advanceTo(t);
+    for(Marble::Ptr m: _marbles) {
+        m->advanceTo(t);
     }
     _t = t;
 }
 
-void Simulation::scheduleNextEventsFor(Marble& m) {
-    if(m.vx() > 0 * meter_per_second) {
-        Time timeToWall = (_w - m.x() - m.r()) / m.vx();
+void Simulation::scheduleNextEventsFor(Marble::Ptr m) {
+    if(m->vx() > 0 * meter_per_second) {
+        Time timeToWall = (_w - m->x() - m->r()) / m->vx();
         scheduleEventIn(timeToWall, boost::make_shared<VerticalWallCollision>(m));
     }
-    if(m.vx() < 0 * meter_per_second) {
-        Time timeToWall = (m.r() - m.x()) / m.vx();
+    if(m->vx() < 0 * meter_per_second) {
+        Time timeToWall = (m->r() - m->x()) / m->vx();
         scheduleEventIn(timeToWall, boost::make_shared<VerticalWallCollision>(m));
     }
-    if(m.vy() > 0 * meter_per_second) {
-        Time timeToWall = (_h - m.y() - m.r()) / m.vy();
+    if(m->vy() > 0 * meter_per_second) {
+        Time timeToWall = (_h - m->y() - m->r()) / m->vy();
         scheduleEventIn(timeToWall, boost::make_shared<HorizontalWallCollision>(m));
     }
-    if(m.vy() < 0 * meter_per_second) {
-        Time timeToWall = (m.r() - m.y()) / m.vy();
+    if(m->vy() < 0 * meter_per_second) {
+        Time timeToWall = (m->r() - m->y()) / m->vy();
         scheduleEventIn(timeToWall, boost::make_shared<HorizontalWallCollision>(m));
     }
 }
