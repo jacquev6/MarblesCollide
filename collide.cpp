@@ -106,10 +106,12 @@ struct Simulation::MarblesCollision : public Simulation::Event {
     {}
 
     void apply(Simulation& s) {
-        _m1->setSpeed(-_m1->vx(), _m1->vy());
-        _m2->setSpeed(-_m2->vx(), _m2->vy());
-        s.scheduleNextEventsFor(_m1);
-        s.scheduleNextEventsFor(_m2);
+        if(_m1->t0() == _t01 && _m2->t0() == _t02) {
+            _m1->setSpeed(-_m1->vx(), _m1->vy());
+            _m2->setSpeed(-_m2->vx(), _m2->vy());
+            s.scheduleNextEventsFor(_m1);
+            s.scheduleNextEventsFor(_m2);
+        }
     }
 
 private:
