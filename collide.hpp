@@ -30,14 +30,16 @@ namespace collide {
         Velocity vy() const;
 
         void advanceTo(Time);
+        void setSpeed(Velocity vx, Velocity vy);
 
     private:
         Length _r;
         Mass _m;
-        Length _x;
-        Length _y;
+        Length _x0;
+        Length _y0;
         Velocity _vx;
         Velocity _vy;
+        Time _t0;
         Time _t;
     };
 } // Namespace
