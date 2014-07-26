@@ -73,15 +73,40 @@ private:
     Marble& _m;
 };
 
-Simulation::Simulation(Length w, Length h, const std::vector<Marble>& marbles) :
+struct Simulation::Tick : public Simulation::Event {
+    void apply(Simulation& s) {
+        s._eventsHandler->tick();
+    }
+};
+
+
+class NullEventsHandler : public EventsHandler {
+    void begin(Simulation*) {}
+    void tick() {}
+};
+
+boost::shared_ptr<EventsHandler> Simulation::nullEventsHandler = boost::make_shared<NullEventsHandler>();
+
+Simulation::Simulation(Length w, Length h, const std::vector<Marble>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) :
+    _t(0),
+    _eventsHandler(eventsHandler),
     _w(w),
     _h(h),
     _marbles(marbles)
 {
     for(Marble& m: _marbles) {
         Time timeToRightWall = (_w - m.x() - m.r()) / m.vx();
-        _events.insert(std::make_pair(timeToRightWall, boost::make_shared<RightWallCollision>(m)));
+        scheduleEventIn(timeToRightWall, boost::make_shared<RightWallCollision>(m));
     }
+    _eventsHandler->begin(this);
+}
+
+Length Simulation::width() const {
+    return _w;
+}
+
+Length Simulation::height() const {
+    return _h;
 }
 
 const std::vector<Marble>& Simulation::marbles() const {
@@ -106,6 +131,15 @@ void Simulation::advanceMarblesTo(Time t) {
     for(Marble& m: _marbles) {
         m.advanceTo(t);
     }
+    _t = t;
+}
+
+void Simulation::scheduleEventIn(Time dt, boost::shared_ptr<Event> e) {
+    _events.insert(std::make_pair(_t + dt, e));
+}
+
+void Simulation::scheduleTickIn(Time dt) {
+    scheduleEventIn(dt, boost::make_shared<Tick>());
 }
 
 } // Namespace

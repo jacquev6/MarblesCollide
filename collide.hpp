@@ -46,32 +46,42 @@ private:
     Time _t;
 };
 
-/*
-class EventsHandler {
-    void tick(const Simulation&);
+class Simulation;
+
+struct EventsHandler {
+    virtual void begin(Simulation*) = 0;
+    virtual void tick() = 0;
 };
-*/
 
 class Simulation {
+    static boost::shared_ptr<EventsHandler> nullEventsHandler;
+
 public:
-    Simulation(Length width, Length height, const std::vector<Marble>&);
+    Simulation(Length width, Length height, const std::vector<Marble>&, boost::shared_ptr<EventsHandler> =nullEventsHandler);
 
     Length width() const;
     Length height() const;
     const std::vector<Marble>& marbles() const;
 
+    void scheduleTickIn(Time);
+
     void advanceTo(Time);
 
 private:
+    class Event;
+    class RightWallCollision;
+    class Tick;
+
     void advanceMarblesTo(Time);
+    void scheduleEventIn(Time, boost::shared_ptr<Event>);
 
 private:
+    Time _t;
     Length _w;
     Length _h;
     std::vector<Marble> _marbles;
-    class Event;
-    class RightWallCollision;
     std::multimap<Time, boost::shared_ptr<Event>> _events;
+    boost::shared_ptr<EventsHandler> _eventsHandler;
 };
 
 } // Namespace

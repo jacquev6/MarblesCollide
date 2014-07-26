@@ -2,6 +2,7 @@
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
 #include <boost/assign.hpp>
+#include <boost/make_shared.hpp>
 
 #include "collide.hpp"
 using namespace collide;
@@ -67,4 +68,28 @@ BOOST_AUTO_TEST_CASE(MarbleCollidesOnRightWall) {
     s.advanceTo(12 * second);
     BOOST_CHECK_EQUAL(s.marbles()[0].x(), 5 * meter);
     BOOST_CHECK_EQUAL(s.marbles()[0].vx(), -1 * meter_per_second);
+}
+
+struct EventsCounter : public EventsHandler {
+    int events;
+    void begin(Simulation*) {
+        ++events;
+    }
+    void tick() {
+        ++events;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(EventsHandlerIsCalled) {
+    auto handler(boost::make_shared<EventsCounter>());
+    BOOST_CHECK_EQUAL(handler->events, 0);
+    Simulation s(10 * meter, 10 * meter, std::vector<Marble>(), handler);
+    BOOST_CHECK_EQUAL(handler->events, 1);
+    s.scheduleTickIn(1 * second);
+    s.scheduleTickIn(2 * second);
+    BOOST_CHECK_EQUAL(handler->events, 1);
+    s.advanceTo(2 * second);
+    BOOST_CHECK_EQUAL(handler->events, 2);
+    s.advanceTo(2.5 * second);
+    BOOST_CHECK_EQUAL(handler->events, 3);
 }
