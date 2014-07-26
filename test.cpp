@@ -54,20 +54,32 @@ BOOST_AUTO_TEST_CASE(ChangeMarbleSpeed) {
 BOOST_AUTO_TEST_CASE(AdvanceSimulation) {
     auto m = Marble::create(0, 0, 1 * meter, 1 * meter, 1 * meter_per_second, 1 * meter_per_second);
     auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m));
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 1 * meter);
+    BOOST_CHECK_EQUAL(m->x(), 1 * meter);
     s->advanceTo(3 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 4 * meter);
+    BOOST_CHECK_EQUAL(m->x(), 4 * meter);
 }
 
 BOOST_AUTO_TEST_CASE(MarbleCollidesOnRightWall) {
     auto m = Marble::create(1 * meter, 0, 1 * meter, 5 * meter, 1 * meter_per_second, 0);
     auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m));
     s->advanceTo(8 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 9 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 9 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), 1 * meter_per_second);
     s->advanceTo(12 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 5 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 5 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), -1 * meter_per_second);
+}
+
+BOOST_AUTO_TEST_CASE(TwoMarblesCollideOnHorizontalTrajectory) {
+    auto m1 = Marble::create(1 * meter, 0, 1 * meter, 5 * meter, 1 * meter_per_second, 0);
+    auto m2 = Marble::create(1 * meter, 0, 9 * meter, 5 * meter, -1 * meter_per_second, 0);
+    auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m1)(m2));
+    s->advanceTo(3 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), -1 * meter_per_second);
+    s->advanceTo(3.1 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), 1 * meter_per_second);
 }
 
 BOOST_AUTO_TEST_CASE(CollisionWithWallIsCanceled) {
@@ -76,41 +88,41 @@ BOOST_AUTO_TEST_CASE(CollisionWithWallIsCanceled) {
     s->advanceTo(7 * second); // 1s before collision
     m->setSpeed(-1 * meter_per_second, 0);
     s->advanceTo(9 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->vx(), -1 * meter_per_second);
 }
 
 BOOST_AUTO_TEST_CASE(MarbleCollidesOnVerticalWallsTwice) {
     auto m = Marble::create(1 * meter, 0, 1 * meter, 5 * meter, 1 * meter_per_second, 0);
     auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m));
     s->advanceTo(8 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 9 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 9 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), 1 * meter_per_second);
     s->advanceTo(16 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 1 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 1 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), -1 * meter_per_second);
     s->advanceTo(24 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 9 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 9 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), 1 * meter_per_second);
     s->advanceTo(32 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->x(), 1 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->x(), 1 * meter);
+    BOOST_CHECK_EQUAL(m->vx(), -1 * meter_per_second);
 }
 
 BOOST_AUTO_TEST_CASE(MarbleCollidesOnHorizontalWallsTwice) {
     auto m = Marble::create(1 * meter, 0, 5 * meter, 1 * meter, 0, 1 * meter_per_second);
     auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m));
     s->advanceTo(8 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->y(), 9 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vy(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->y(), 9 * meter);
+    BOOST_CHECK_EQUAL(m->vy(), 1 * meter_per_second);
     s->advanceTo(16 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->y(), 1 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vy(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->y(), 1 * meter);
+    BOOST_CHECK_EQUAL(m->vy(), -1 * meter_per_second);
     s->advanceTo(24 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->y(), 9 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vy(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->y(), 9 * meter);
+    BOOST_CHECK_EQUAL(m->vy(), 1 * meter_per_second);
     s->advanceTo(32 * second);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->y(), 1 * meter);
-    BOOST_CHECK_EQUAL(s->marbles()[0]->vy(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m->y(), 1 * meter);
+    BOOST_CHECK_EQUAL(m->vy(), -1 * meter_per_second);
 }
 
 struct EventsCounter : public EventsHandler {

@@ -78,8 +78,13 @@ public:
 private:
     Simulation(Length, Length, const std::vector<Marble::Ptr>&, EventsHandler::Ptr);
 
+    void scheduleNextCollisionsWithWalls(Marble::Ptr);
+    void scheduleNextCollisionsWithOtherMarbles(Marble::Ptr);
+    void scheduleNextCollisionBetween(Marble::Ptr, Marble::Ptr);
+
     class Event;
     class WallCollision;
+    class MarblesCollision;
     class Tick;
 
     void advanceMarblesTo(Time);
