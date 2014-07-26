@@ -1,14 +1,14 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
+#include <boost/assign.hpp>
 
 #include "collide.hpp"
 using namespace collide;
 using namespace bu;
 
-BOOST_AUTO_TEST_CASE(test_hello) {
-    BOOST_CHECK_EQUAL(collide::hello(), "Hello, World");
-}
+namespace ba = boost::assign;
+
 
 BOOST_AUTO_TEST_CASE(AdvanceMarble) {
     Marble m(1 * meter, 1 * kilogram, 1 * meter, 2 * meter, 3 * meter_per_second, 4 * meter_per_second);
@@ -48,4 +48,12 @@ BOOST_AUTO_TEST_CASE(ChangeMarbleSpeed) {
     m.advanceTo(10 * second);
     BOOST_CHECK_EQUAL(m.x(), 41 * meter);
     BOOST_CHECK_EQUAL(m.y(), 52 * meter);
+}
+
+BOOST_AUTO_TEST_CASE(AdvanceSimulation) {
+    Marble m(0, 0, 1 * meter, 1 * meter, 1 * meter_per_second, 1 * meter_per_second);
+    Simulation s(10 * meter, 10 * meter, ba::list_of(m));
+    BOOST_CHECK_EQUAL(s.marbles()[0].x(), 1 * meter);
+    s.advanceTo(3 * second);
+    BOOST_CHECK_EQUAL(s.marbles()[0].x(), 4 * meter);
 }

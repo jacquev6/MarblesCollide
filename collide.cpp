@@ -1,5 +1,6 @@
 #include "collide.hpp"
 
+
 namespace collide {
 
 Marble::Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
@@ -35,8 +36,19 @@ void Marble::setSpeed(Velocity vx, Velocity vy) {
     _vy = vy;
 }
 
-std::string hello() {
-    return "Hello, World";
+Simulation::Simulation(Length, Length, const std::vector<Marble>& marbles) :
+    _marbles(marbles)
+{
 }
 
+const std::vector<Marble>& Simulation::marbles() const {
+    return _marbles;
 }
+
+void Simulation::advanceTo(Time t) {
+    for(Marble& m: _marbles) {
+        m.advanceTo(t);
+    }
+}
+
+} // Namespace

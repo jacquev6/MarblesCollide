@@ -6,9 +6,11 @@
 
 #include "collide.hpp"
 
+
 using namespace Cairo;
 using namespace collide;
 using namespace bu;
+
 
 void draw(int i, const Marble& m) {
     RefPtr<ImageSurface> img = ImageSurface::create(FORMAT_RGB24, 800, 600);
@@ -20,6 +22,7 @@ void draw(int i, const Marble& m) {
     ctx->fill();
     img->write_to_png((boost::format("frames/%08d.png") % i).str());
 }
+
 
 int main() {
     Marble m(0, 0, 50 * meter, 50 * meter, 7 * meter_per_second, 10 * meter_per_second);
