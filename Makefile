@@ -14,3 +14,8 @@ collide: collide.o main.cpp tests.ok
 
 clean:
 	rm -f collide.o test_collide collide tests.ok
+
+video.avi: collide
+	rm -f frames/*.png
+	./collide
+	avconv -y -i frames/%08d.png video.avi
