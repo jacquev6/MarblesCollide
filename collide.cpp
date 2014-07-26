@@ -106,11 +106,10 @@ struct Simulation::MarblesCollision : public Simulation::Event {
     {}
 
     void apply(Simulation& s) {
-        std::cout << "Applying" << std::endl;
         _m1->setSpeed(-_m1->vx(), _m1->vy());
         _m2->setSpeed(-_m2->vx(), _m2->vy());
-        //s.scheduleNextEventsFor(_m1);
-        //s.scheduleNextEventsFor(_m2);
+        s.scheduleNextEventsFor(_m1);
+        s.scheduleNextEventsFor(_m2);
     }
 
 private:
@@ -242,14 +241,19 @@ void Simulation::scheduleNextCollisionBetween(Marble::Ptr m1, Marble::Ptr m2) {
     auto b = (m1->x() - m2->x()) * (m1->vx() - m2->vx()) + (m1->y() - m2->y()) * (m1->vy() - m2->vy());
     auto c = (m1->x() - m2->x()) * (m1->x() - m2->x()) + (m1->y() - m2->y()) * (m1->y() - m2->y()) - (m1->r() + m2->r()) * (m1->r() + m2->r());
     if(a == 0 * meter * meter / second / second) {
-        throw 0; // @todo When does it degenerate to a linear equation? Do we need to handle this case?
+        // @todo When does it degenerate to a linear equation? Do we need to handle this case?
     } else {
         auto delta = b * b - a * c;
         if(delta >= 0 * meter * meter * meter * meter / second / second) {
             Time t1 = (sqrt(delta) - b) / a;
             Time t2 = (-sqrt(delta) - b) / a;
             Time t = std::min(t1, t2);
-            scheduleEventIn(t, boost::make_shared<MarblesCollision>(m1, m2));
+            if(t <= 0 * second) {
+                t = std::max(t1, t2);
+            }
+            if(t > 0 * second) {
+                scheduleEventIn(t, boost::make_shared<MarblesCollision>(m1, m2));
+            }
         }
     }
 }

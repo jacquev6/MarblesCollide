@@ -82,6 +82,30 @@ BOOST_AUTO_TEST_CASE(TwoMarblesCollideOnHorizontalTrajectory) {
     BOOST_CHECK_EQUAL(m2->vx(), 1 * meter_per_second);
 }
 
+BOOST_AUTO_TEST_CASE(TwoMarblesCollideOnEachOtherAndOnWallsSeveralTimes) {
+    auto m1 = Marble::create(1 * meter, 0, 1 * meter, 5 * meter, 1 * meter_per_second, 0);
+    auto m2 = Marble::create(1 * meter, 0, 9 * meter, 5 * meter, -1 * meter_per_second, 0);
+    auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m1)(m2));
+    s->advanceTo(3 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), -1 * meter_per_second);
+    s->advanceTo(6 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), 1 * meter_per_second);
+    s->advanceTo(9 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), -1 * meter_per_second);
+    s->advanceTo(12 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), 1 * meter_per_second);
+    s->advanceTo(15 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), 1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), -1 * meter_per_second);
+    s->advanceTo(18 * second);
+    BOOST_CHECK_EQUAL(m1->vx(), -1 * meter_per_second);
+    BOOST_CHECK_EQUAL(m2->vx(), 1 * meter_per_second);
+}
+
 BOOST_AUTO_TEST_CASE(CollisionWithWallIsCanceled) {
     auto m = Marble::create(1 * meter, 0, 1 * meter, 2 * meter, 1 * meter_per_second, 0);
     auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m));
