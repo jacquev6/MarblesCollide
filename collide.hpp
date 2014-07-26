@@ -31,6 +31,7 @@ public:
     Mass m() const;
     Length x() const;
     Length y() const;
+    Time t0() const;
     Velocity vx() const;
     Velocity vy() const;
 
@@ -78,8 +79,7 @@ private:
     Simulation(Length, Length, const std::vector<Marble::Ptr>&, EventsHandler::Ptr);
 
     class Event;
-    class VerticalWallCollision;
-    class HorizontalWallCollision;
+    class WallCollision;
     class Tick;
 
     void advanceMarblesTo(Time);

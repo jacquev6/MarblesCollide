@@ -38,6 +38,10 @@ Length Marble::y() const {
     return _y0 + _vy * (_t - _t0);
 }
 
+Time Marble::t0() const {
+    return _t0;
+}
+
 Velocity Marble::vx() const {
     return _vx;
 }
@@ -65,32 +69,26 @@ struct Simulation::Event {
     virtual ~Event() {};
 };
 
-struct Simulation::VerticalWallCollision : public Simulation::Event {
-    VerticalWallCollision(Marble::Ptr m) :
-        _m(m)
+struct Simulation::WallCollision : public Simulation::Event {
+    WallCollision(Marble::Ptr m, bool fx, bool fy) :
+        _m(m),
+        _t0(m->t0()),
+        _fx(fx),
+        _fy(fy)
     {}
 
     void apply(Simulation& s) {
-        _m->setSpeed(-_m->vx(), _m->vy());
-        s.scheduleNextEventsFor(_m);
+        if(_m->t0() == _t0) {
+            _m->setSpeed(_fx ? -_m->vx() : _m->vx(), _fy ? -_m->vy() : _m->vy());
+            s.scheduleNextEventsFor(_m);
+        }
     }
 
 private:
     Marble::Ptr _m;
-};
-
-struct Simulation::HorizontalWallCollision : public Simulation::Event {
-    HorizontalWallCollision(Marble::Ptr m) :
-        _m(m)
-    {}
-
-    void apply(Simulation& s) {
-        _m->setSpeed(_m->vx(), -_m->vy());
-        s.scheduleNextEventsFor(_m);
-    }
-
-private:
-    Marble::Ptr _m;
+    Time _t0;
+    bool _fx;
+    bool _fy;
 };
 
 struct Simulation::Tick : public Simulation::Event {
@@ -160,19 +158,19 @@ void Simulation::advanceMarblesTo(Time t) {
 void Simulation::scheduleNextEventsFor(Marble::Ptr m) {
     if(m->vx() > 0 * meter_per_second) {
         Time timeToWall = (_w - m->x() - m->r()) / m->vx();
-        scheduleEventIn(timeToWall, boost::make_shared<VerticalWallCollision>(m));
+        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, true, false));
     }
     if(m->vx() < 0 * meter_per_second) {
         Time timeToWall = (m->r() - m->x()) / m->vx();
-        scheduleEventIn(timeToWall, boost::make_shared<VerticalWallCollision>(m));
+        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, true, false));
     }
     if(m->vy() > 0 * meter_per_second) {
         Time timeToWall = (_h - m->y() - m->r()) / m->vy();
-        scheduleEventIn(timeToWall, boost::make_shared<HorizontalWallCollision>(m));
+        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, false, true));
     }
     if(m->vy() < 0 * meter_per_second) {
         Time timeToWall = (m->r() - m->y()) / m->vy();
-        scheduleEventIn(timeToWall, boost::make_shared<HorizontalWallCollision>(m));
+        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, false, true));
     }
 }
 
