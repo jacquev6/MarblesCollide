@@ -57,3 +57,14 @@ BOOST_AUTO_TEST_CASE(AdvanceSimulation) {
     s.advanceTo(3 * second);
     BOOST_CHECK_EQUAL(s.marbles()[0].x(), 4 * meter);
 }
+
+BOOST_AUTO_TEST_CASE(MarbleCollidesOnRightWall) {
+    Marble m(1 * meter, 0, 1 * meter, 5 * meter, 1 * meter_per_second, 0);
+    Simulation s(10 * meter, 10 * meter, ba::list_of(m));
+    s.advanceTo(8 * second);
+    BOOST_CHECK_EQUAL(s.marbles()[0].x(), 9 * meter);
+    BOOST_CHECK_EQUAL(s.marbles()[0].vx(), 1 * meter_per_second);
+    s.advanceTo(12 * second);
+    BOOST_CHECK_EQUAL(s.marbles()[0].x(), 5 * meter);
+    BOOST_CHECK_EQUAL(s.marbles()[0].vx(), -1 * meter_per_second);
+}

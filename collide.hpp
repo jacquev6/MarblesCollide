@@ -1,10 +1,12 @@
 #ifndef collide_hpp
 #define collide_hpp
 
-#include <string>
+#include <vector>
+#include <map>
 
 #include <boost/units/systems/si.hpp>
 #include <boost/units/io.hpp>
+#include <boost/shared_ptr.hpp>
 
 
 namespace bu {
@@ -43,11 +45,13 @@ private:
     Time _t0;
     Time _t;
 };
+
 /*
 class EventsHandler {
     void tick(const Simulation&);
 };
 */
+
 class Simulation {
 public:
     Simulation(Length width, Length height, const std::vector<Marble>&);
@@ -59,7 +63,15 @@ public:
     void advanceTo(Time);
 
 private:
+    void advanceMarblesTo(Time);
+
+private:
+    Length _w;
+    Length _h;
     std::vector<Marble> _marbles;
+    class Event;
+    class RightWallCollision;
+    std::multimap<Time, boost::shared_ptr<Event>> _events;
 };
 
 } // Namespace
