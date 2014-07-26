@@ -64,12 +64,13 @@ public:
     const std::vector<Marble>& marbles() const;
 
     void scheduleTickIn(Time);
-
+    void scheduleNextEventsFor(Marble&);
     void advanceTo(Time);
 
 private:
     class Event;
-    class RightWallCollision;
+    class VerticalWallCollision;
+    class HorizontalWallCollision;
     class Tick;
 
     void advanceMarblesTo(Time);

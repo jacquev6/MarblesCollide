@@ -39,7 +39,7 @@ private:
         }
         ctx->fill();
         img->write_to_png((boost::format("frames/%08d.png") % _i).str());
-        _s->scheduleTickIn(1 / 25. * second);
+        _s->scheduleTickIn(1 / 60. * second);
         ++_i;
     }
 
@@ -48,7 +48,7 @@ private:
 };
 
 int main() {
-    Marble m(25 * meter, 0, 25 * meter, 25 * meter, 200 * meter_per_second, 20 * meter_per_second);
+    Marble m(50 * meter, 0, 50 * meter, 50 * meter, 400 * meter_per_second, 150 * meter_per_second);
     Simulation s(640 * meter, 480 * meter, ba::list_of(m), boost::make_shared<FramesDrawer>());
-    s.advanceTo(10 * second);
+    s.advanceTo(20 * second);
 }
