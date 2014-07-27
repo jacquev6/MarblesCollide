@@ -5,7 +5,6 @@
 #include <map>
 
 #include <boost/units/systems/si.hpp>
-#include <boost/units/io.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 
@@ -25,8 +24,9 @@ typedef bu::quantity<bu::time> Time;
 class Marble : private boost::noncopyable {
 public:
     typedef boost::shared_ptr<Marble> Ptr;
-    static Ptr create(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
+    static Ptr create(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
 
+    std::string name() const;
     Length r() const;
     Mass m() const;
     Length x() const;
@@ -39,9 +39,10 @@ public:
     void setSpeed(Velocity vx, Velocity vy);
 
 private:
-    Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
+    Marble(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
 
 private:
+    std::string _name;
     Length _r;
     Mass _m;
     Length _x0;
@@ -58,6 +59,7 @@ struct EventsHandler {
     typedef boost::shared_ptr<EventsHandler> Ptr;
     virtual void begin(Simulation*) = 0;
     virtual void tick() = 0;
+    virtual void collision(Marble::Ptr, Marble::Ptr) = 0;
 };
 
 class Simulation {
@@ -67,19 +69,20 @@ public:
     typedef boost::shared_ptr<Simulation> Ptr;
     static Ptr create(Length width, Length height, const std::vector<Marble::Ptr>&, EventsHandler::Ptr=nullEventsHandler);
 
+    Time t() const;
     Length width() const;
     Length height() const;
     const std::vector<Marble::Ptr>& marbles() const;
 
     void scheduleTickIn(Time);
-    void scheduleNextEventsFor(Marble::Ptr);
+    void scheduleNextEventsFor(Marble::Ptr, Marble::Ptr=Marble::Ptr());
     void advanceTo(Time);
 
 private:
     Simulation(Length, Length, const std::vector<Marble::Ptr>&, EventsHandler::Ptr);
 
     void scheduleNextCollisionsWithWalls(Marble::Ptr);
-    void scheduleNextCollisionsWithOtherMarbles(Marble::Ptr);
+    void scheduleNextCollisionsWithOtherMarbles(Marble::Ptr, Marble::Ptr);
     void scheduleNextCollisionBetween(Marble::Ptr, Marble::Ptr);
 
     class Event;

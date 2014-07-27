@@ -10,3 +10,4 @@ Todo
 * read command-line options to know what kind of output must be generated, in which resolution, etc.
 * create an ouptut with velocity vectors (long as speed, thick as mass)
 * create a demo output combining the different types of outputs on different areas of the video
+* enforce that marbles can't intersect in initial situation; or maybe we can just not schedule collision when two marble intersect, because sometime due to floating-point computation, just after a collision, the two marble intersect and a hack (the notThisM parameter of Simulation::scheduleNextCollisionsWithOtherMarbles) has been introduced.

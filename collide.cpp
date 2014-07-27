@@ -7,7 +7,8 @@ using namespace bu;
 
 namespace collide {
 
-Marble::Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
+Marble::Marble(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
+    _name(name),
     _r(r),
     _m(m),
     _x0(x),
@@ -19,8 +20,12 @@ Marble::Marble(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
 {
 }
 
-Marble::Ptr Marble::create(Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) {
-    return Ptr(new Marble(r, m, x, y, vx, vy));
+Marble::Ptr Marble::create(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) {
+    return Ptr(new Marble(name, r, m, x, y, vx, vy));
+}
+
+std::string Marble::name() const {
+    return _name;
 }
 
 Length Marble::r() const {
@@ -107,6 +112,7 @@ struct Simulation::MarblesCollision : public Simulation::Event {
 
     void apply(Simulation& s) {
         if(_m1->t0() == _t01 && _m2->t0() == _t02) {
+            s._eventsHandler->collision(_m1, _m2);
             // "All models are wrong, some are useful" http://en.wikiquote.org/wiki/George_E._P._Box#Empirical_Model-Building_and_Response_Surfaces_.281987.29
             // So we use the model of a perfect elastic collision, neglecting energy dissipation, spin, etc.
             // - total energy is unchanged: m1 * |v1|² + m2 * |v2|² = const
@@ -129,8 +135,8 @@ struct Simulation::MarblesCollision : public Simulation::Event {
 
             _m1->setSpeed(v1x, v1y);
             _m2->setSpeed(v2x, v2y);
-            s.scheduleNextEventsFor(_m1);
-            s.scheduleNextEventsFor(_m2);
+            s.scheduleNextEventsFor(_m1, _m2);
+            s.scheduleNextEventsFor(_m2, _m1);
         }
     }
 
@@ -151,6 +157,7 @@ struct Simulation::Tick : public Simulation::Event {
 class NullEventsHandler : public EventsHandler {
     void begin(Simulation*) {}
     void tick() {}
+    void collision(Marble::Ptr, Marble::Ptr) {}
 };
 
 boost::shared_ptr<EventsHandler> Simulation::nullEventsHandler = boost::make_shared<NullEventsHandler>();
@@ -175,6 +182,10 @@ Simulation::Simulation(Length w, Length h, const std::vector<Marble::Ptr>& marbl
 
 Simulation::Ptr Simulation::create(Length w, Length h, const std::vector<Marble::Ptr>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) {
     return Ptr(new Simulation(w, h, marbles, eventsHandler));
+}
+
+Time Simulation::t() const {
+    return _t;
 }
 
 Length Simulation::width() const {
@@ -210,9 +221,9 @@ void Simulation::advanceMarblesTo(Time t) {
     _t = t;
 }
 
-void Simulation::scheduleNextEventsFor(Marble::Ptr m) {
+void Simulation::scheduleNextEventsFor(Marble::Ptr m, Marble::Ptr notThisM) {
     scheduleNextCollisionsWithWalls(m);
-    scheduleNextCollisionsWithOtherMarbles(m);
+    scheduleNextCollisionsWithOtherMarbles(m, notThisM);
 }
 
 void Simulation::scheduleNextCollisionsWithWalls(Marble::Ptr m) {
@@ -234,9 +245,9 @@ void Simulation::scheduleNextCollisionsWithWalls(Marble::Ptr m) {
     }
 }
 
-void Simulation::scheduleNextCollisionsWithOtherMarbles(Marble::Ptr m) {
+void Simulation::scheduleNextCollisionsWithOtherMarbles(Marble::Ptr m, Marble::Ptr notThisM) {
     for(auto m2: _marbles) {
-        if(m2 != m) {
+        if(m2 != m && m2 != notThisM) {
             scheduleNextCollisionBetween(m, m2);
         }
     }
