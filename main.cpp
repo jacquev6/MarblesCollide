@@ -48,8 +48,8 @@ private:
 };
 
 int main() {
-    auto m1 = Marble::create(50 * meter, 0, 50 * meter, 240 * meter, 200 * meter_per_second, 0);
-    auto m2 = Marble::create(50 * meter, 0, 590 * meter, 240 * meter, 200 * meter_per_second, 0);
+    auto m1 = Marble::create(50 * meter, 1 * kilogram, 50 * meter, 150 * meter, 200 * meter_per_second, 0);
+    auto m2 = Marble::create(50 * meter, 1 * kilogram, 590 * meter, 170 * meter, -200 * meter_per_second, 0);
     auto s = Simulation::create(640 * meter, 480 * meter, ba::list_of(m1)(m2), boost::make_shared<FramesDrawer>());
     s->advanceTo(20 * second);
 }

@@ -107,8 +107,28 @@ struct Simulation::MarblesCollision : public Simulation::Event {
 
     void apply(Simulation& s) {
         if(_m1->t0() == _t01 && _m2->t0() == _t02) {
-            _m1->setSpeed(-_m1->vx(), _m1->vy());
-            _m2->setSpeed(-_m2->vx(), _m2->vy());
+            // "All models are wrong, some are useful" http://en.wikiquote.org/wiki/George_E._P._Box#Empirical_Model-Building_and_Response_Surfaces_.281987.29
+            // So we use the model of a perfect elastic collision, neglecting energy dissipation, spin, etc.
+            // - total energy is unchanged: m1 * |v1|² + m2 * |v2|² = const
+            // - total movement is unchanged: m1 * v1 + m2 * v2 = const
+            // - force impulse is aligned with the centers, so there is no change on the composents of velocity normal to this vector
+
+            // Normal vector
+            auto nx = (_m2->x() - _m1->x()) / sqrt((_m2->x() - _m1->x()) * (_m2->x() - _m1->x()) + (_m2->y() - _m1->y()) * (_m2->y() - _m1->y()));
+            auto ny = (_m2->y() - _m1->y()) / sqrt((_m2->x() - _m1->x()) * (_m2->x() - _m1->x()) + (_m2->y() - _m1->y()) * (_m2->y() - _m1->y()));
+
+            // Vrel
+            Velocity vrelx = ((_m2->vx() - _m1->vx()) * nx + (_m2->vy() - _m1->vy()) * ny) * nx;
+            Velocity vrely = ((_m2->vx() - _m1->vx()) * nx + (_m2->vy() - _m1->vy()) * ny) * ny;
+
+            Velocity v1x = _m1->vx() + _m2->m() / (_m1->m() + _m2->m()) * vrelx + _m2->m() / (_m1->m() + _m2->m()) * vrelx;
+            Velocity v1y = _m1->vy() + _m2->m() / (_m1->m() + _m2->m()) * vrely + _m2->m() / (_m1->m() + _m2->m()) * vrely;
+
+            Velocity v2x = _m2->vx() - _m1->m() / (_m1->m() + _m2->m()) * vrelx - _m1->m() / (_m1->m() + _m2->m()) * vrelx;
+            Velocity v2y = _m2->vy() - _m1->m() / (_m1->m() + _m2->m()) * vrely - _m1->m() / (_m1->m() + _m2->m()) * vrely;
+
+            _m1->setSpeed(v1x, v1y);
+            _m2->setSpeed(v2x, v2y);
             s.scheduleNextEventsFor(_m1);
             s.scheduleNextEventsFor(_m2);
         }
