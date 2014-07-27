@@ -85,6 +85,17 @@ BOOST_AUTO_TEST_CASE(TwoMarblesCollideFrontalyOnHorizontalTrajectory) {
     CHECK_CLOSE(m2->vx(), 1 * meter_per_second);
 }
 
+BOOST_AUTO_TEST_CASE(TwoIntersectingMarblesAreFreeToSplit) {
+    auto m1 = Marble::create("1", 1 * meter, 1 * kilogram, 4.5 * meter, 5 * meter, -1 * meter_per_second, 0);
+    auto m2 = Marble::create("2", 1 * meter, 1 * kilogram, 5.5 * meter, 5 * meter, 1 * meter_per_second, 0);
+    auto s = Simulation::create(10 * meter, 10 * meter, ba::list_of(m1)(m2));
+    s->advanceTo(3 * second);
+    CHECK_CLOSE(m1->vx(), -1 * meter_per_second);
+    CHECK_CLOSE(m2->vx(), 1 * meter_per_second);
+    CHECK_CLOSE(m1->x(), 1.5 * meter);
+    CHECK_CLOSE(m2->x(), 8.5 * meter);
+}
+
 BOOST_AUTO_TEST_CASE(TwoMarblesCollideFrontalyOnVerticalTrajectory) {
     auto m1 = Marble::create("1", 1 * meter, 1 * kilogram, 5 * meter, 1 * meter, 0, 1 * meter_per_second);
     auto m2 = Marble::create("2", 1 * meter, 1 * kilogram, 5 * meter, 9 * meter, 0, -1 * meter_per_second);
