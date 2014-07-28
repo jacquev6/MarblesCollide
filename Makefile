@@ -18,4 +18,4 @@ clean:
 video.avi: collide
 	rm -f frames/*.png
 	./collide
-	avconv -y -r 60 -i frames/%08d.png video.avi
+	avconv -y -r 25 -i frames/%08d.png video.avi

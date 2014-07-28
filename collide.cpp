@@ -1,303 +1,365 @@
 #include "collide.hpp"
 
 #include <boost/make_shared.hpp>
-#include <boost/units/cmath.hpp>
+#include <boost/assign.hpp>
 
-using namespace bu;
+//#define DEBUG(s) std::cout << s << std::endl
+#ifdef DEBUG
+#include <iostream>
+#else
+#define DEBUG(s)
+#endif
+
 
 namespace collide {
 
-Marble::Marble(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) :
+Position::Position(float x_, float y_) : x(x_), y(y_) {}
+
+Displacement::Displacement(float dx_, float dy_) : dx(dx_), dy(dy_) {}
+float Displacement::length() const {
+    return sqrt(length2());
+}
+float Displacement::length2() const {
+    return dx * dx + dy * dy;
+}
+
+Date::Date(float t_) : t(t_) {}
+
+Duration::Duration(float dt_) : dt(dt_) {}
+
+Velocity::Velocity(float vx_, float vy_) : vx(vx_), vy(vy_) {}
+
+Displacement operator-(const Position& a, const Position& b) {
+    return Displacement(a.x - b.x, a.y - b.y);
+}
+
+Position operator+(const Position& p, const Displacement& d) {
+    return Position(p.x + d.dx, p.y + d.dy);
+}
+
+Displacement operator*(float f, const Displacement& d) {
+    return Displacement(f * d.dx, f * d.dy);
+}
+
+Displacement operator/(const Displacement& d, float f) {
+    return Displacement(d.dx / f, d.dy / f);
+}
+
+Velocity operator/(const Displacement& d, const Duration& t) {
+    return Velocity(d.dx / t.dt, d.dy / t.dt);
+}
+
+Velocity operator*(float f, const Velocity& v) {
+    return Velocity(f * v.vx, f * v.vy);
+}
+
+Velocity operator/(const Velocity& v, float f) {
+    return Velocity(v.vx / f, v.vy / f);
+}
+
+Velocity operator+(const Velocity& a, const Velocity& b) {
+    return Velocity(a.vx + b.vx, a.vy + b.vy);
+}
+
+Velocity operator-(const Velocity& a, const Velocity& b) {
+    return Velocity(a.vx - b.vx, a.vy - b.vy);
+}
+
+Displacement operator*(const Velocity& v, const Duration& d) {
+    return Displacement(v.vx * d.dt, v.vy * d.dt);
+}
+
+Duration operator-(const Date& a, const Date& b) {
+    return Duration(a.t - b.t);
+}
+
+Duration operator*(float f, const Duration& d) {
+    return Duration(f * d.dt);
+}
+
+Duration operator/(const Duration& d, float f) {
+    return Duration(d.dt / f);
+}
+
+Date operator+(const Date& t, const Duration& d) {
+    return Date(t.t + d.dt);
+}
+
+bool operator>(const Date& a, const Date& b) {
+    return a.t > b.t;
+}
+
+bool operator<(const Date& a, const Date& b) {
+    return a.t < b.t;
+}
+
+
+Marble::Marble(std::string name, float r, float m, Position p, Velocity v) :
     _name(name),
     _r(r),
     _m(m),
-    _x0(x),
-    _y0(y),
-    _vx(vx),
-    _vy(vy),
+    _p0(p),
     _t0(0),
-    _t(0)
+    _v(v)
 {
-}
-
-Marble::Ptr Marble::create(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy) {
-    return Ptr(new Marble(name, r, m, x, y, vx, vy));
 }
 
 std::string Marble::name() const {
     return _name;
 }
 
-Length Marble::r() const {
+float Marble::r() const {
     return _r;
 }
 
-Mass Marble::m() const {
+float Marble::m() const {
     return _m;
 }
 
-Length Marble::x() const {
-    return _x0 + _vx * (_t - _t0);
+Position Marble::p(Date t) const {
+    return _p0 + _v * (t - _t0);
 }
 
-Length Marble::y() const {
-    return _y0 + _vy * (_t - _t0);
-}
-
-Time Marble::t0() const {
+Date Marble::t0() const {
     return _t0;
 }
 
-Velocity Marble::vx() const {
-    return _vx;
+Velocity Marble::v() const {
+    return _v;
 }
 
-Velocity Marble::vy() const {
-    return _vy;
+void Marble::setVelocity(Date t, Velocity v) {
+    _p0 = p(t);
+    _t0 = t;
+    _v = v;
 }
 
-
-void Marble::advanceTo(Time t) {
-    assert(t >= _t);
-    _t = t;
-}
-
-
-void Marble::setSpeed(Velocity vx, Velocity vy) {
-    _x0 = x();
-    _y0 = y();
-    _t0 = _t;
-    _vx = vx;
-    _vy = vy;
-}
-
-
-struct Simulation::Event {
-    //virtual bool isStillValid(const Simulation&) const = 0;
-    virtual void apply(Simulation&) = 0;
-    virtual ~Event() {};
-};
-
-
-struct Simulation::WallCollision : public Simulation::Event {
-    WallCollision(Marble::Ptr m, bool fx, bool fy) :
-        _m(m),
-        _t0(m->t0()),
-        _fx(fx),
-        _fy(fy)
-    {}
-
-    void apply(Simulation& s) {
-        if(_m->t0() == _t0) {
-            _m->setSpeed(_fx ? -_m->vx() : _m->vx(), _fy ? -_m->vy() : _m->vy());
-            s.scheduleNextEventsFor(_m);
+namespace collisions {
+    boost::optional<Date> nextCollisionDate(const Date& after, const Marble& m1, const Marble& m2) {
+        boost::optional<Date> t = collisionDate(m1, m2);
+        if(t && *t > after) {
+            return t;
         }
+        return boost::optional<Date>();
     }
 
-private:
-    Marble::Ptr _m;
-    Time _t0;
-    bool _fx;
-    bool _fy;
-};
+    boost::optional<Date> collisionDate(const Marble& m1, const Marble& m2) {
+        // Collision at t (to be solved for t)
+        // <=> (m1.p(t) - m2.p(t)).length() == m1.r() + m2.r()
+        // <=> ((m1.p(0) + m1.v() * t) - (m2.p(0) + m2.v() * t)).length2() == (m1.r() + m2.r())²
+        float r2 = (m1.r() + m2.r()) * (m1.r() + m2.r());
+        // <=>   ((m1.p(0).x + m1.v().vx * t) - (m2.p(0).x + m2.v().vx * t))²
+        //     + ((m1.p(0).y + m1.v().vy * t) - (m2.p(0).y + m2.v().vy * t))²
+        //     == r2
+        // <=>   ((m1.p(0).x - m2.p(0).x) + (m1.v().vx - m2.v().vx) * t)²
+        //     + ((m1.p(0).y - m2.p(0).y) + (m1.v().vy - m2.v().vy) * t)²
+        //     == r2
+        float dx = m1.p(0).x - m2.p(0).x;
+        float dy = m1.p(0).y - m2.p(0).y;
+        float dvx = m1.v().vx - m2.v().vx;
+        float dvy = m1.v().vy - m2.v().vy;
+        // <=> (dx + dvx * t)² + (dy + dvy * t)² == r2
+        // <=> (dx² + 2 * dx * dvx * t + dvx² * t²) + (dy² + 2 * dy * dvy * t + dvy² * t²) == r2
+        // <=> (dvx² + dvy²) * t² + 2 * (dx * dvx + dy * dvy) * t + (dx² + dy² - r2) == 0
+        float a = dvx * dvx + dvy * dvy;
+        float b = dx * dvx + dy * dvy;
+        float c = dx * dx + dy * dy - r2;
+        // <=> a * t² + 2 * b * t + c == 0
 
+        // Some properties of this parabol:
+        //  - it's concav (decreasing first then increasing) because two constant-velocity objects first get closer to each other, then get further.
+        //    Also, this is proven by the fact that a is a sum of squares, hence positive or null.
+        assert(a >= 0);
+        //  - it degenerates to an horizontal line when m1.v() == m2.v(), meaning that two objects with same velocity have a constant distance between them.
+        //    This is consistent with a being the norm of m1.v() - m2.v(), null in that case.
+        //    And if a == 0, then dvx == 0 and dvy == 0, so b == 0 too: two objects with same velocity never collide (unless they always touch each other, which we don't model)
 
-struct Simulation::MarblesCollision : public Simulation::Event {
-    MarblesCollision(Marble::Ptr m1, Marble::Ptr m2) :
-        _m1(m1),
-        _m2(m2),
-        _t01(m1->t0()),
-        _t02(m2->t0())
-    {}
-
-    void apply(Simulation& s) {
-        if(_m1->t0() == _t01 && _m2->t0() == _t02) {
-            s._eventsHandler->collision(_m1, _m2);
-            // "All models are wrong, some are useful" http://en.wikiquote.org/wiki/George_E._P._Box#Empirical_Model-Building_and_Response_Surfaces_.281987.29
-            // So we use the model of a perfect elastic collision, neglecting energy dissipation, spin, etc.
-            // - total energy is unchanged: m1 * |v1|² + m2 * |v2|² = const
-            // - total movement is unchanged: m1 * v1 + m2 * v2 = const
-            // - force impulse is aligned with the centers, so there is no change on the composents of velocity normal to this vector
-
-            // Normal vector
-            auto nx = (_m2->x() - _m1->x()) / sqrt((_m2->x() - _m1->x()) * (_m2->x() - _m1->x()) + (_m2->y() - _m1->y()) * (_m2->y() - _m1->y()));
-            auto ny = (_m2->y() - _m1->y()) / sqrt((_m2->x() - _m1->x()) * (_m2->x() - _m1->x()) + (_m2->y() - _m1->y()) * (_m2->y() - _m1->y()));
-
-            // Vrel
-            Velocity vrelx = ((_m2->vx() - _m1->vx()) * nx + (_m2->vy() - _m1->vy()) * ny) * nx;
-            Velocity vrely = ((_m2->vx() - _m1->vx()) * nx + (_m2->vy() - _m1->vy()) * ny) * ny;
-
-            Velocity v1x = _m1->vx() + _m2->m() / (_m1->m() + _m2->m()) * vrelx + _m2->m() / (_m1->m() + _m2->m()) * vrelx;
-            Velocity v1y = _m1->vy() + _m2->m() / (_m1->m() + _m2->m()) * vrely + _m2->m() / (_m1->m() + _m2->m()) * vrely;
-
-            Velocity v2x = _m2->vx() - _m1->m() / (_m1->m() + _m2->m()) * vrelx - _m1->m() / (_m1->m() + _m2->m()) * vrelx;
-            Velocity v2y = _m2->vy() - _m1->m() / (_m1->m() + _m2->m()) * vrely - _m1->m() / (_m1->m() + _m2->m()) * vrely;
-
-            _m1->setSpeed(v1x, v1y);
-            _m2->setSpeed(v2x, v2y);
-            s.scheduleNextEventsFor(_m1, _m2);
-            s.scheduleNextEventsFor(_m2, _m1);
-        }
-    }
-
-private:
-    Marble::Ptr _m1;
-    Marble::Ptr _m2;
-    Time _t01;
-    Time _t02;
-};
-
-struct Simulation::Tick : public Simulation::Event {
-    void apply(Simulation& s) {
-        s._eventsHandler->tick();
-    }
-};
-
-
-class NullEventsHandler : public EventsHandler {
-    void begin(Simulation*) {}
-    void tick() {}
-    void collision(Marble::Ptr, Marble::Ptr) {}
-};
-
-boost::shared_ptr<EventsHandler> Simulation::nullEventsHandler = boost::make_shared<NullEventsHandler>();
-
-Simulation::Simulation(Length w, Length h, const std::vector<Marble::Ptr>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) :
-    _t(0),
-    _w(w),
-    _h(h),
-    _marbles(marbles),
-    _eventsHandler(eventsHandler)
-{
-    for(Marble::Ptr m: _marbles) {
-        scheduleNextCollisionsWithWalls(m);
-        for(Marble::Ptr m2: _marbles) {
-            if(m2.get() > m.get()) {
-                scheduleNextCollisionBetween(m, m2);
+        if(a != 0) {
+            float delta = b * b - a * c;
+            if(delta >= 0) {
+                // a > 0 so we know which root is smaller.
+                // This is the only root we're interrested in, because the other one corresponds to when marbles "touch" after intersecting
+                return Date((-b - sqrt(delta)) / a);
             }
         }
+        return boost::optional<Date>();
     }
-    _eventsHandler->begin(this);
+
+    void performCollision(const Date& t, Marble& m1, Marble& m2) {
+        // "All models are wrong, some are useful" http://en.wikiquote.org/wiki/George_E._P._Box#Empirical_Model-Building_and_Response_Surfaces_.281987.29
+        // So we use the model of a perfect elastic collision, neglecting energy dissipation, spin, etc.
+        // - total energy is unchanged: m1 * |v1|² + m2 * |v2|² = const
+        // - total movement is unchanged: m1 * v1 + m2 * v2 = const
+        // - force impulse is aligned with the centers, so there is no change on the composents of velocity normal to this vector
+
+        // Normal vector
+        Displacement centers = m2.p(t) - m1.p(t);
+        float nx = centers.dx / centers.length();
+        float ny = centers.dy / centers.length();
+
+        // Vrel
+        float v = (m2.v().vx - m1.v().vx) * nx + (m2.v().vy - m1.v().vy) * ny;
+        Velocity vrel(v * nx, v * ny);
+
+        Velocity v1 = m1.v() + 2 * m2.m() / (m1.m() + m2.m()) * vrel;
+        Velocity v2 = m2.v() - 2 * m1.m() / (m1.m() + m2.m()) * vrel;
+
+        m1.setVelocity(t, v1);
+        m2.setVelocity(t, v2);
+    }
 }
 
-Simulation::Ptr Simulation::create(Length w, Length h, const std::vector<Marble::Ptr>& marbles, boost::shared_ptr<EventsHandler> eventsHandler) {
-    return Ptr(new Simulation(w, h, marbles, eventsHandler));
+
+Simulation::Simulation(float width, float height, const std::vector<boost::shared_ptr<Marble>>& marbles) :
+    _w(width),
+    _h(height),
+    _marbles(marbles),
+    _t(0),
+    _events()
+{
+    scheduleInitialEvents();
 }
 
-Time Simulation::t() const {
+Date Simulation::t() const {
     return _t;
 }
 
-Length Simulation::width() const {
+float Simulation::width() const {
     return _w;
 }
 
-Length Simulation::height() const {
+float Simulation::height() const {
     return _h;
 }
 
-const std::vector<Marble::Ptr>& Simulation::marbles() const {
+const std::vector<boost::shared_ptr<Marble>>& Simulation::marbles() const {
     return _marbles;
 }
 
-void Simulation::advanceTo(Time t) {
-    while(!_events.empty()) {
-        std::pair<Time, boost::shared_ptr<Event>> e = *_events.begin();
-        if(e.first < t) {
-            advanceMarblesTo(e.first);
-            e.second->apply(*this);
-            _events.erase(_events.begin());
-        } else {
-            break;
-        }
-    }
-    advanceMarblesTo(t);
-}
 
-void Simulation::advanceMarblesTo(Time t) {
-    for(Marble::Ptr m: _marbles) {
-        m->advanceTo(t);
+void Simulation::runUntil(const Date& t) {
+    while(!_events.empty() && _events.top()->t() < t) {
+        auto e = _events.top();
+        _t = e->t();
+        e->apply(*this);
+        _events.pop();
     }
     _t = t;
 }
 
-void Simulation::scheduleNextEventsFor(Marble::Ptr m, Marble::Ptr notThisM) {
-    scheduleNextCollisionsWithWalls(m);
-    scheduleNextCollisionsWithOtherMarbles(m, notThisM);
+Simulation::Event::Event(const Date& t, std::vector<boost::shared_ptr<Marble>> marbles) :
+    _t(t),
+    _marbles(marbles.begin(), marbles.end())
+{
 }
 
-void Simulation::scheduleNextCollisionsWithWalls(Marble::Ptr m) {
-    if(m->vx() > 0 * meter_per_second) {
-        Time timeToWall = (_w - m->x() - m->r()) / m->vx();
-        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, true, false));
-    }
-    if(m->vx() < 0 * meter_per_second) {
-        Time timeToWall = (m->r() - m->x()) / m->vx();
-        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, true, false));
-    }
-    if(m->vy() > 0 * meter_per_second) {
-        Time timeToWall = (_h - m->y() - m->r()) / m->vy();
-        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, false, true));
-    }
-    if(m->vy() < 0 * meter_per_second) {
-        Time timeToWall = (m->r() - m->y()) / m->vy();
-        scheduleEventIn(timeToWall, boost::make_shared<WallCollision>(m, false, true));
-    }
+Date Simulation::Event::t() const {
+    return _t;
 }
 
-void Simulation::scheduleNextCollisionsWithOtherMarbles(Marble::Ptr m, Marble::Ptr notThisM) {
-    for(auto m2: _marbles) {
-        if(m2 != m && m2 != notThisM) {
-            scheduleNextCollisionBetween(m, m2);
+void Simulation::Event::apply(Simulation& s) {
+    for(ImpactedMarble m: _marbles) {
+        if(!m.check()) {
+            DEBUG("Cancelling event at t=" << t().t);
+            return;
         }
     }
-}
-
-void Simulation::scheduleNextCollisionBetween(Marble::Ptr m1, Marble::Ptr m2) {
-    // m1(r1, x1, y1, vx1, vy1) collides with m2(r2, x2, y2, vx2, vy2)?
-    // x1(t) = x1 + vx1 * t
-    // y1(t) = y1 + vy1 * t
-    // x2(t) = x2 + vx2 * t
-    // y2(t) = y2 + vy2 * t
-    // Collision <=> dist((x1(t), y1(t)), (x2(t), y2(t))) == r1 + r2
-    // (to be solved for t)
-    // <=> (x1(t) - x2(t))² + (y1(t) - y2(t))² == (r1 + r2)²
-    // <=> (x1 + vx1 * t - x2 - vx2 * t) ² + (y1 + vy1 * t - y2 - vy2 * t)² == (r1 + r2)²
-    // <=> (x1 - x2 + (vx1 - vx2) * t)² + (y1 - y2 + (vy1 - vy2) * t)² == (r1 + r2)²
-    // <=> (x1 - x2)² + 2 * (x1 - x2) * (vx1 - vx2) * t + (vx1 - vx2)² * t² + (y1 - y2)² + 2 * (y1 - y2) * (vy1 - vy2) * t + (vy1 - vy2)² * t² == (r1 + r2)²
-    // <=> ((x1 - x2)² + (y1 - y2)² - (r1 + r2)²) + 2 * ((x1 - x2) * (vx1 - vx2) + (y1 - y2) * (vy1 - vy2)) * t + ((vx1 - vx2)² + (vy1 - vy2)²) * t² == 0
-    // Let a = (vx1 - vx2)² + (vy1 - vy2)²
-    //     b = (x1 - x2) * (vx1 - vx2) + (y1 - y2) * (vy1 - vy2)
-    //     c = (x1 - x2)² + (y1 - y2)² - (r1 + r2)²
-    // Collision <=> a * t² + 2 * b * t + c == 0
-    auto a = (m1->vx() - m2->vx()) * (m1->vx() - m2->vx()) + (m1->vy() - m2->vy()) * (m1->vy() - m2->vy());
-    auto b = (m1->x() - m2->x()) * (m1->vx() - m2->vx()) + (m1->y() - m2->y()) * (m1->vy() - m2->vy());
-    auto c = (m1->x() - m2->x()) * (m1->x() - m2->x()) + (m1->y() - m2->y()) * (m1->y() - m2->y()) - (m1->r() + m2->r()) * (m1->r() + m2->r());
-    if(a == 0 * meter * meter / second / second) {
-        // @todo When does it degenerate to a linear equation? Do we need to handle this case?
-    } else {
-        auto delta = b * b - a * c;
-        if(delta >= 0 * meter * meter * meter * meter / second / second) {
-            Time t1 = (sqrt(delta) - b) / a;
-            Time t2 = (-sqrt(delta) - b) / a;
-            Time t = std::min(t1, t2);
-            if(t <= 0 * second) {
-                t = std::max(t1, t2);
-            }
-            if(t > 0 * second) {
-                scheduleEventIn(t, boost::make_shared<MarblesCollision>(m1, m2));
-            }
-        }
+    doApply(s);
+    for(ImpactedMarble m: _marbles) {
+        s.scheduleNextEvents(m.marble);
     }
 }
 
-void Simulation::scheduleEventIn(Time dt, boost::shared_ptr<Event> e) {
-    assert(dt >= 0 * second);
-    _events.insert(std::make_pair(_t + dt, e));
+class Simulation::MarblesCollision : public Event {
+public:
+    MarblesCollision(const Date& t, boost::shared_ptr<Marble> m1, boost::shared_ptr<Marble> m2) :
+        Event(t, boost::assign::list_of(m1)(m2)),
+        _m1(m1),
+        _m2(m2)
+    {}
+
+public:
+    void doApply(Simulation&) {
+        DEBUG("Executing collision between " << _m1->name() << " and " << _m2->name() << " at t=" << t().t);
+        collisions::performCollision(t(), *_m1, *_m2);
+    }
+
+private:
+    boost::shared_ptr<Marble> _m1;
+    boost::shared_ptr<Marble> _m2;
+};
+
+class Simulation::WallCollision : public Event {
+public:
+    WallCollision(const Date& t, boost::shared_ptr<Marble> m, bool h, bool v) :
+        Event(t, boost::assign::list_of(m)),
+        _m(m),
+        _h(h),
+        _v(v)
+    {}
+
+public:
+    void doApply(Simulation&) {
+        DEBUG("Executing collision between " << _m->name() << " and wall at t=" << t().t);
+        float vx = _m->v().vx;
+        float vy = _m->v().vy;
+        if(_h) vx *= -1;
+        if(_v) vy *= -1;
+        _m->setVelocity(t(), Velocity(vx, vy));
+    }
+
+private:
+    boost::shared_ptr<Marble> _m;
+    bool _h;
+    bool _v;
+};
+
+void Simulation::scheduleInitialEvents() {
+    for(boost::shared_ptr<Marble> m1: _marbles) {
+        for(boost::shared_ptr<Marble> m2: _marbles) {
+            if(m1 < m2) {
+                boost::optional<Date> t = collisions::nextCollisionDate(_t, *m1, *m2);
+                if(t) {
+                    DEBUG("Scheduling initial collision between " << m1->name() << " and " << m2->name() << " at t=" << t->t);
+                    _events.push(boost::make_shared<MarblesCollision>(*t, m1, m2));
+                }
+            }
+        }
+        scheduleNextWallCollision(m1);
+    }
 }
 
-void Simulation::scheduleTickIn(Time dt) {
-    scheduleEventIn(dt, boost::make_shared<Tick>());
+void Simulation::scheduleNextEvents(boost::shared_ptr<Marble> m1) {
+    for(boost::shared_ptr<Marble> m2: _marbles) {
+        boost::optional<Date> t = collisions::nextCollisionDate(_t, *m1, *m2);
+        if(t) {
+            DEBUG("Scheduling next collision between " << m1->name() << " and " << m2->name() << " at t=" << t->t);
+            _events.push(boost::make_shared<MarblesCollision>(*t, m1, m2));
+        }
+    }
+    scheduleNextWallCollision(m1);
 }
 
+void Simulation::scheduleNextWallCollision(boost::shared_ptr<Marble> m1) {
+    if(m1->v().vx > 0) {
+        Date t(_t.t + (_w - m1->p(_t).x - m1->r()) / m1->v().vx);
+        DEBUG("Scheduling collision between " << m1->name() << " and right wall at t=" << t.t);
+        _events.push(boost::make_shared<WallCollision>(t, m1, true, false));
+    }
+    if(m1->v().vx < 0) {
+        Date t(_t.t - (m1->p(_t).x - m1->r()) / m1->v().vx);
+        DEBUG("Scheduling collision between " << m1->name() << " and left wall at t=" << t.t);
+        _events.push(boost::make_shared<WallCollision>(t, m1, true, false));
+    }
+    if(m1->v().vy > 0) {
+        Date t(_t.t + (_h - m1->p(_t).y - m1->r()) / m1->v().vy);
+        DEBUG("Scheduling collision between " << m1->name() << " and bottom wall at t=" << t.t);
+        _events.push(boost::make_shared<WallCollision>(t, m1, false, true));
+    }
+    if(m1->v().vy < 0) {
+        Date t(_t.t - (m1->p(_t).y - m1->r()) / m1->v().vy);
+        DEBUG("Scheduling collision between " << m1->name() << " and top wall at t=" << t.t);
+        _events.push(boost::make_shared<WallCollision>(t, m1, false, true));
+    }
+}
 } // Namespace

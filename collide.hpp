@@ -2,104 +2,148 @@
 #define collide_hpp
 
 #include <vector>
-#include <map>
+#include <queue>
 
-#include <boost/units/systems/si.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/optional.hpp>
 
-
-namespace bu {
-    using namespace boost::units;
-    using namespace boost::units::si;
-} // Namespace
 
 namespace collide {
 
-typedef bu::quantity<bu::length> Length;
-typedef bu::quantity<bu::velocity> Velocity;
-typedef bu::quantity<bu::mass> Mass;
-typedef bu::quantity<bu::time> Time;
+struct Position {
+    Position(float x_, float y_);
+    float x;
+    float y;
+};
 
-class Marble : private boost::noncopyable {
+struct Displacement {
+    Displacement(float dx_, float dy_);
+    float dx;
+    float dy;
+    float length2() const;
+    float length() const;
+};
+
+struct Date {
+    Date(float t_);
+    float t;
+};
+
+struct Duration {
+    Duration(float dt_);
+    float dt;
+};
+
+struct Velocity {
+    Velocity(float vx_, float vy_);
+    float vx;
+    float vy;
+};
+
+Displacement operator-(const Position&, const Position&);
+Position operator+(const Position&, const Displacement&);
+Displacement operator*(float, const Displacement&);
+Displacement operator/(const Displacement&, float);
+Velocity operator/(const Displacement&, const Duration&);
+Velocity operator*(float, const Velocity&);
+Velocity operator/(const Velocity&, float);
+Velocity operator+(const Velocity&, const Velocity&);
+Velocity operator-(const Velocity&, const Velocity&);
+Displacement operator*(const Velocity&, const Duration&);
+Duration operator-(const Date&, const Date&);
+Duration operator*(float, const Duration&);
+Duration operator/(const Duration&, float);
+Date operator+(const Date&, const Duration&);
+bool operator>(const Date&, const Date&);
+bool operator<(const Date&, const Date&);
+
+class Marble;
+
+namespace collisions {
+    boost::optional<Date> nextCollisionDate(const Date& after, const Marble&, const Marble&);
+    boost::optional<Date> collisionDate(const Marble&, const Marble&);
+    void performCollision(const Date&, Marble&, Marble&);
+}
+
+class Marble {
 public:
-    typedef boost::shared_ptr<Marble> Ptr;
-    static Ptr create(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
+    Marble(std::string name, float r, float m, Position p, Velocity v);
 
     std::string name() const;
-    Length r() const;
-    Mass m() const;
-    Length x() const;
-    Length y() const;
-    Time t0() const;
-    Velocity vx() const;
-    Velocity vy() const;
+    float r() const;
+    float m() const;
+    Position p(Date) const;
+    Date t0() const;
+    Velocity v() const;
 
-    void advanceTo(Time);
-    void setSpeed(Velocity vx, Velocity vy);
-
-private:
-    Marble(std::string name, Length r, Mass m, Length x, Length y, Velocity vx, Velocity vy);
+    void setVelocity(Date, Velocity);
 
 private:
     std::string _name;
-    Length _r;
-    Mass _m;
-    Length _x0;
-    Length _y0;
-    Velocity _vx;
-    Velocity _vy;
-    Time _t0;
-    Time _t;
+    float _r;
+    float _m;
+    Position _p0;
+    Date _t0;
+    Velocity _v;
 };
 
-class Simulation;
-
-struct EventsHandler {
-    typedef boost::shared_ptr<EventsHandler> Ptr;
-    virtual void begin(Simulation*) = 0;
-    virtual void tick() = 0;
-    virtual void collision(Marble::Ptr, Marble::Ptr) = 0;
-};
 
 class Simulation {
-    static EventsHandler::Ptr nullEventsHandler;
+public:
+    Simulation(float width, float height, const std::vector<boost::shared_ptr<Marble>>&);
+
+    float width() const;
+    float height() const;
+    const std::vector<boost::shared_ptr<Marble>>& marbles() const;
 
 public:
-    typedef boost::shared_ptr<Simulation> Ptr;
-    static Ptr create(Length width, Length height, const std::vector<Marble::Ptr>&, EventsHandler::Ptr=nullEventsHandler);
-
-    Time t() const;
-    Length width() const;
-    Length height() const;
-    const std::vector<Marble::Ptr>& marbles() const;
-
-    void scheduleTickIn(Time);
-    void scheduleNextEventsFor(Marble::Ptr, Marble::Ptr=Marble::Ptr());
-    void advanceTo(Time);
+    void scheduleTickAt(const Date&);
+    void runUntil(const Date&);
+    Date t() const;
 
 private:
-    Simulation(Length, Length, const std::vector<Marble::Ptr>&, EventsHandler::Ptr);
+    float _w;
+    float _h;
+    std::vector<boost::shared_ptr<Marble>> _marbles;
+    Date _t;
 
-    void scheduleNextCollisionsWithWalls(Marble::Ptr);
-    void scheduleNextCollisionsWithOtherMarbles(Marble::Ptr, Marble::Ptr);
-    void scheduleNextCollisionBetween(Marble::Ptr, Marble::Ptr);
+private:
+    class Event {
+    public:
+        Event(const Date&, std::vector<boost::shared_ptr<Marble>>);
+        virtual ~Event() {};
 
-    class Event;
-    class WallCollision;
+        Date t() const;
+
+        void apply(Simulation&);
+
+    private:
+        virtual void doApply(Simulation&) = 0;
+
+    private:
+        struct ImpactedMarble {
+            ImpactedMarble(boost::shared_ptr<Marble> marble_) : marble(marble_), _t0(marble->t0()) {}
+            bool check() const {return marble->t0().t == _t0.t;}
+            boost::shared_ptr<Marble> marble;
+            Date _t0;
+        };
+        Date _t;
+        std::vector<ImpactedMarble> _marbles;
+    };
+    struct EventComparer {
+        bool operator()(boost::shared_ptr<Event> a, boost::shared_ptr<Event> b) {
+            return a->t() > b-> t(); // Comparison reversed to make a min-priority_queue
+        }
+    };
+    std::priority_queue<boost::shared_ptr<Event>, std::vector<boost::shared_ptr<Event>>, EventComparer> _events;
+
     class MarblesCollision;
-    class Tick;
+    class WallCollision;
 
-    void advanceMarblesTo(Time);
-    void scheduleEventIn(Time, boost::shared_ptr<Event>);
-
-private:
-    Time _t;
-    Length _w;
-    Length _h;
-    std::vector<Marble::Ptr> _marbles;
-    std::multimap<Time, boost::shared_ptr<Event>> _events;
-    boost::shared_ptr<EventsHandler> _eventsHandler;
+    void scheduleInitialEvents();
+    void scheduleNextEvents(boost::shared_ptr<Marble>);
+    void scheduleNextWallCollision(boost::shared_ptr<Marble>);
 };
 
 } // Namespace
