@@ -38,18 +38,19 @@ int main() {
     marbles.push_back(boost::make_shared<Marble>("M", 50, 10, pM, Velocity(0, 0)));
     boost::random::mt19937 mt(42);
     boost::random::uniform_01<boost::random::mt19937> gen(mt);
-    for(int x = 20; x < 640; x += 50) {
-        for(int y = 15; y < 480; y += 50) {
+
+    for(int x = 20; x < 640; x += 25) {
+        for(int y = 15; y < 480; y += 25) {
             Position p(x, y);
             if((p - pM).length() > 70) {
-                marbles.push_back(boost::make_shared<Marble>("m", 7, 1, p, Velocity((200 * gen() - 100), (200 * gen() - 100))));
+                marbles.push_back(boost::make_shared<Marble>("m", 3, 1, p, Velocity((200 * gen() - 100), (200 * gen() - 100))));
             }
         }
     }
     Simulation s(640, 480, marbles);
     FramesDrawer d;
-    const int duration = 30;
-    std::cout << "Simulating" << std::flush;
+    const int duration = 60;
+    std::cout << "Simulating " << marbles.size() << " marbles" << std::flush;
     for(int i = 0; i != duration * 25 + 1; ++i) {
         s.runUntil(Date(i / 25.));
         d.draw(s, i);
