@@ -1,4 +1,8 @@
-This produces videos simulating collisions between marbles. Demo: http://youtu.be/9y4D8cbrjJ0
+This produces videos simulating collisions between marbles.
+
+Demo on YouTube:
+
+[![Demo on YouTube](http://img.youtube.com/vi/9y4D8cbrjJ0/0.jpg)](http://youtu.be/9y4D8cbrjJ0)
 
 Questions, remarks, suggestions? Open an [issue](https://github.com/jacquev6/MarblesCollide/issues)!
 
@@ -18,6 +22,7 @@ Todo
 ====
 
 * generate a log of the events simulation
+* display the log of events on the video
 * read initial positions from a file
 * generate video in main program instead of writing each frame to disk and calling avconv (see https://github.com/jacquev6/MinimalExamples/tree/VideoFromCairoAndLibav/master)
 * separate the frame generators from the video creator
@@ -25,3 +30,4 @@ Todo
 * create an ouptut with velocity vectors (long as speed, thick as mass)
 * create a demo output combining the different types of outputs on different areas of the video
 * add sound on collision... "Spouich spouich" or "tick-tick-tick" :)
+* generate videos with two frame rates and compare them (visually) to prove the simulation doesn't depend on the frame rate
