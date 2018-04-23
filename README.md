@@ -1,4 +1,5 @@
 This produces videos simulating collisions between marbles.
+This was just a prototype to validate alogirhtms for [Collide](https://github.com/jacquev6/Collide).
 
 Demo on YouTube:
 
